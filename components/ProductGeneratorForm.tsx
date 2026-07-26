@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ImageUpload from './ImageUpload';
+import BulkGeneratorModal from './BulkGeneratorModal';
 import {
   Sparkles,
   Loader2,
@@ -14,6 +15,14 @@ import {
   Zap,
   ArrowRight,
   Bookmark,
+  Layers,
+  Users,
+  Sliders,
+  FileSpreadsheet,
+  FileText,
+  Share2,
+  Search,
+  CheckCircle2,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -31,6 +40,13 @@ const TONES = [
   { label: 'Casual', value: 'Casual' },
   { label: 'Luxury', value: 'Luxury' },
   { label: 'Playful', value: 'Playful' },
+  { label: 'Urgent / Promotional', value: 'Promotional' },
+];
+
+const FRAMEWORKS = [
+  { label: 'AIDA (Attention, Interest, Desire, Action)', value: 'AIDA', desc: 'Best for general e-commerce & high conversions' },
+  { label: 'PAS (Problem, Agitate, Solution)', value: 'PAS', desc: 'Best for pain-point problem-solver products' },
+  { label: 'FAB (Features, Advantages, Benefits)', value: 'FAB', desc: 'Best for technical, gadget & apparel items' },
 ];
 
 interface GeneratedProduct {
@@ -38,9 +54,16 @@ interface GeneratedProduct {
   imageUrl: string;
   keywords: string[];
   language: string;
+  copywritingFramework?: string;
+  bulletFeatures?: string[];
+  socialHook?: string;
+  targetAudience?: string;
   generatedTitle: string;
   generatedDescription: string;
   generatedTags: string[];
+  seoMetaTitle?: string;
+  seoMetaDescription?: string;
+  keywordDensityScore?: number;
   createdAt: string;
 }
 
@@ -50,8 +73,15 @@ export default function ProductGeneratorForm() {
   const [keywords, setKeywords] = useState<string[]>([]);
   const [language, setLanguage] = useState<string>('English');
   const [tone, setTone] = useState<string>('Professional');
+  const [framework, setFramework] = useState<string>('AIDA');
+  const [targetAudience, setTargetAudience] = useState<string>('');
+  const [brandVoice, setBrandVoice] = useState<string>('');
 
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoadingPreset, setIsLoadingPreset] = useState(false);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [presetLoadedMsg, setPresetLoadedMsg] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
   const [isLimitExceeded, setIsLimitExceeded] = useState(false);
   const [generatedProduct, setGeneratedProduct] = useState<GeneratedProduct | null>(null);
@@ -59,7 +89,36 @@ export default function ProductGeneratorForm() {
   // Copy buttons state
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  // Handle keyword comma separation & max 3 limit
+  // Auto-load brand preset on mount if available
+  useEffect(() => {
+    fetchUserPreset();
+  }, []);
+
+  const fetchUserPreset = async () => {
+    setIsLoadingPreset(true);
+    try {
+      const res = await fetch('/api/user/preset');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.defaultTone) setTone(data.defaultTone);
+        if (data.defaultLanguage) setLanguage(data.defaultLanguage);
+        if (data.defaultFramework) setFramework(data.defaultFramework);
+        if (data.targetAudience) setTargetAudience(data.targetAudience);
+        if (data.brandVoice) setBrandVoice(data.brandVoice);
+      }
+    } catch (err) {
+      console.error('Failed to load user brand preset:', err);
+    } finally {
+      setIsLoadingPreset(false);
+    }
+  };
+
+  const handleApplyBrandPreset = async () => {
+    await fetchUserPreset();
+    setPresetLoadedMsg(true);
+    setTimeout(() => setPresetLoadedMsg(false), 2500);
+  };
+
   const handleKeywordInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setKeywordInput(val);
@@ -105,7 +164,6 @@ export default function ProductGeneratorForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Flush any pending text in keywordInput if < 3
     let finalKeywords = [...keywords];
     if (keywordInput.trim() && !finalKeywords.includes(keywordInput.trim()) && finalKeywords.length < 3) {
       finalKeywords.push(keywordInput.trim());
@@ -133,6 +191,9 @@ export default function ProductGeneratorForm() {
           keywords: finalKeywords,
           language,
           tone,
+          framework,
+          targetAudience,
+          brandVoice,
         }),
       });
 
@@ -157,20 +218,47 @@ export default function ProductGeneratorForm() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
       {/* Left Column: Input Form */}
-      <div className="lg:col-span-7 space-y-6">
+      <div className="lg:col-span-6 space-y-6">
         <form
           onSubmit={handleSubmit}
           className="rounded-2xl border border-gray-800 bg-gray-900/60 backdrop-blur-xl p-6 shadow-2xl space-y-6"
         >
-          <div className="flex items-center justify-between border-b border-gray-800 pb-4">
+          {/* Header & Quick Action Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-800 pb-4">
             <div>
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-blue-400" />
                 Product AI Generator
               </h2>
               <p className="text-xs text-gray-400 mt-1">
-                Upload your product image and set parameters to generate SEO copy.
+                Upload image & set parameters for SEO copywriting.
               </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleApplyBrandPreset}
+                disabled={isLoadingPreset}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-purple-500/30 bg-purple-500/10 px-3 py-1.5 text-xs font-semibold text-purple-300 hover:bg-purple-500/20 transition"
+                title="Load saved Brand Voice and default parameters"
+              >
+                {isLoadingPreset ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Sliders className="w-3.5 h-3.5" />
+                )}
+                {presetLoadedMsg ? 'Preset Loaded!' : 'Brand Preset'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsBulkModalOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/20 transition"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                Bulk CSV
+              </button>
             </div>
           </div>
 
@@ -189,11 +277,35 @@ export default function ProductGeneratorForm() {
             />
           </div>
 
-          {/* 2. Keywords Input */}
+          {/* 2. Copywriting Framework Selector */}
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-2">
+              2. Copywriting Framework <span className="text-blue-400">*</span>
+            </label>
+            <div className="relative">
+              <Layers className="w-4 h-4 text-gray-500 absolute left-3.5 top-3 pointer-events-none" />
+              <select
+                value={framework}
+                onChange={(e) => setFramework(e.target.value)}
+                className="w-full appearance-none rounded-xl border border-gray-800 bg-gray-950/80 pl-10 pr-4 py-2.5 text-xs font-medium text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition-all"
+              >
+                {FRAMEWORKS.map((fw) => (
+                  <option key={fw.value} value={fw.value} className="bg-gray-900 text-white">
+                    {fw.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="text-[11px] text-gray-400 mt-1 pl-1">
+              {FRAMEWORKS.find((f) => f.value === framework)?.desc}
+            </p>
+          </div>
+
+          {/* 3. Keywords Input */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300">
-                2. Keywords <span className="text-gray-500 font-normal">(Comma-separated, max 3)</span>
+                3. Target SEO Keywords <span className="text-gray-500 font-normal">(Comma-separated, max 3)</span>
               </label>
               <span className="text-[11px] font-medium text-gray-400">
                 {keywords.length}/3 keywords
@@ -228,7 +340,7 @@ export default function ProductGeneratorForm() {
                     onKeyDown={handleAddKeyword}
                     placeholder={
                       keywords.length === 0
-                        ? 'e.g. eco-friendly, wireless, ergonomic (press enter or comma)'
+                        ? 'e.g. leather, waterproof, ergonomic (press enter or comma)'
                         : 'Add keyword...'
                     }
                     className="flex-1 min-w-[150px] bg-transparent text-xs text-white placeholder-gray-500 focus:outline-none"
@@ -238,33 +350,27 @@ export default function ProductGeneratorForm() {
             </div>
           </div>
 
-          {/* 3. Target Language & Tone Grid */}
+          {/* 4. Target Audience & Brand Voice Inputs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Target Language */}
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-2">
-                3. Target Language
+                4. Target Audience <span className="text-gray-500 font-normal">(Optional)</span>
               </label>
               <div className="relative">
-                <Globe className="w-4 h-4 text-gray-500 absolute left-3.5 top-3 pointer-events-none" />
-                <select
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  className="w-full appearance-none rounded-xl border border-gray-800 bg-gray-950/80 pl-10 pr-4 py-2.5 text-xs font-medium text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition-all"
-                >
-                  {LANGUAGES.map((lang) => (
-                    <option key={lang.value} value={lang.value} className="bg-gray-900 text-white">
-                      {lang.label}
-                    </option>
-                  ))}
-                </select>
+                <Users className="w-4 h-4 text-gray-500 absolute left-3.5 top-3 pointer-events-none" />
+                <input
+                  type="text"
+                  value={targetAudience}
+                  onChange={(e) => setTargetAudience(e.target.value)}
+                  placeholder="e.g. Fitness Enthusiasts, Moms"
+                  className="w-full rounded-xl border border-gray-800 bg-gray-950/80 pl-10 pr-4 py-2.5 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition-all"
+                />
               </div>
             </div>
 
-            {/* Tone Dropdown */}
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-2">
-                4. Brand Tone
+                5. Brand Voice Tone
               </label>
               <div className="relative">
                 <Smile className="w-4 h-4 text-gray-500 absolute left-3.5 top-3 pointer-events-none" />
@@ -280,6 +386,27 @@ export default function ProductGeneratorForm() {
                   ))}
                 </select>
               </div>
+            </div>
+          </div>
+
+          {/* 5. Target Language */}
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-2">
+              6. Target Language
+            </label>
+            <div className="relative">
+              <Globe className="w-4 h-4 text-gray-500 absolute left-3.5 top-3 pointer-events-none" />
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className="w-full appearance-none rounded-xl border border-gray-800 bg-gray-950/80 pl-10 pr-4 py-2.5 text-xs font-medium text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/30 transition-all"
+              >
+                {LANGUAGES.map((lang) => (
+                  <option key={lang.value} value={lang.value} className="bg-gray-900 text-white">
+                    {lang.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -318,7 +445,7 @@ export default function ProductGeneratorForm() {
             {isGenerating ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Analyzing Image & Writing Copy...
+                Analyzing Image & Writing Copy ({framework})...
               </>
             ) : (
               <>
@@ -330,85 +457,164 @@ export default function ProductGeneratorForm() {
         </form>
       </div>
 
-      {/* Right Column: Output / Result Preview */}
-      <div className="lg:col-span-5 space-y-6">
+      {/* Right Column: Structured E-Commerce Result Preview */}
+      <div className="lg:col-span-6 space-y-6">
         <div className="rounded-2xl border border-gray-800 bg-gray-900/60 backdrop-blur-xl p-6 shadow-2xl h-full flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between border-b border-gray-800 pb-4 mb-6">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <Bookmark className="w-5 h-5 text-emerald-400" />
-                AI Output Result
+                Structured Output Result
               </h3>
               {generatedProduct && (
-                <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full font-medium">
-                  Saved to Database
-                </span>
+                <div className="flex items-center gap-2">
+                  {generatedProduct.keywordDensityScore && (
+                    <span className="text-xs bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2.5 py-1 rounded-full font-semibold flex items-center gap-1">
+                      <Search className="w-3 h-3" />
+                      SEO Score: {generatedProduct.keywordDensityScore}%
+                    </span>
+                  )}
+                  <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full font-medium">
+                    Saved
+                  </span>
+                </div>
               )}
             </div>
 
             {isGenerating ? (
-              <div className="py-20 flex flex-col items-center justify-center text-center space-y-4">
+              <div className="py-24 flex flex-col items-center justify-center text-center space-y-4">
                 <div className="relative">
                   <div className="w-16 h-16 rounded-full border-4 border-blue-500/20 border-t-blue-500 animate-spin" />
                   <Sparkles className="w-6 h-6 text-purple-400 absolute inset-0 m-auto" />
                 </div>
-                <h4 className="text-sm font-semibold text-white">Generating Copy with Vision AI</h4>
+                <h4 className="text-sm font-semibold text-white">Generating with {framework} Copywriting Framework</h4>
                 <p className="text-xs text-gray-400 max-w-xs">
-                  Evaluating product features, building SEO parameters, and formatting output...
+                  Vision AI is extracting visual features, crafting bullet points, and formatting SEO meta tags...
                 </p>
               </div>
             ) : generatedProduct ? (
-              <div className="space-y-6 text-left">
-                {/* 1. Generated Title */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
-                      SEO Optimized Title
+              <div className="space-y-5 text-left max-h-[620px] overflow-y-auto pr-1">
+                {/* 1. SEO Title */}
+                <div className="rounded-xl border border-gray-800 bg-gray-950/80 p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5" />
+                      🎯 Catchy SEO Title
                     </span>
                     <button
                       onClick={() => copyToClipboard(generatedProduct.generatedTitle, 'title')}
                       className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
                     >
-                      {copiedField === 'title' ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      ) : (
-                        <Copy className="w-3.5 h-3.5" />
-                      )}
+                      {copiedField === 'title' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                       {copiedField === 'title' ? 'Copied' : 'Copy'}
                     </button>
                   </div>
-                  <h4 className="text-sm font-bold text-white bg-gray-950/80 p-3 rounded-xl border border-gray-800">
-                    {generatedProduct.generatedTitle}
-                  </h4>
+                  <h4 className="text-sm font-bold text-white">{generatedProduct.generatedTitle}</h4>
                 </div>
 
-                {/* 2. Generated Description */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
-                      Benefit-Driven Description
+                {/* 2. Key Bullet Features */}
+                {generatedProduct.bulletFeatures && generatedProduct.bulletFeatures.length > 0 && (
+                  <div className="rounded-xl border border-gray-800 bg-gray-950/80 p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        📌 Bullet Features (Key Highlights)
+                      </span>
+                      <button
+                        onClick={() => copyToClipboard(generatedProduct.bulletFeatures!.join('\n• '), 'bullets')}
+                        className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                      >
+                        {copiedField === 'bullets' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        {copiedField === 'bullets' ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                    <ul className="space-y-1.5 text-xs text-gray-300">
+                      {generatedProduct.bulletFeatures.map((b, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="text-emerald-400 font-bold">•</span>
+                          <span>{b}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* 3. Main Copywriting Description */}
+                <div className="rounded-xl border border-gray-800 bg-gray-950/80 p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5" />
+                      📝 Persuasive Copywriting ({generatedProduct.copywritingFramework || framework})
                     </span>
                     <button
                       onClick={() => copyToClipboard(generatedProduct.generatedDescription, 'desc')}
                       className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
                     >
-                      {copiedField === 'desc' ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      ) : (
-                        <Copy className="w-3.5 h-3.5" />
-                      )}
+                      {copiedField === 'desc' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                       {copiedField === 'desc' ? 'Copied' : 'Copy'}
                     </button>
                   </div>
-                  <div className="text-xs text-gray-300 bg-gray-950/80 p-3.5 rounded-xl border border-gray-800 leading-relaxed whitespace-pre-line max-h-60 overflow-y-auto">
+                  <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-line">
                     {generatedProduct.generatedDescription}
+                  </p>
+                </div>
+
+                {/* 4. Social Media Ad Hook */}
+                {generatedProduct.socialHook && (
+                  <div className="rounded-xl border border-gray-800 bg-gray-950/80 p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                        <Share2 className="w-3.5 h-3.5" />
+                        💡 Social Media Hook / Ad Copy
+                      </span>
+                      <button
+                        onClick={() => copyToClipboard(generatedProduct.socialHook!, 'social')}
+                        className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                      >
+                        {copiedField === 'social' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        {copiedField === 'social' ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                    <p className="text-xs text-amber-200/90 italic bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20">
+                      &quot;{generatedProduct.socialHook}&quot;
+                    </p>
+                  </div>
+                )}
+
+                {/* 5. Google SEO Meta Title & Description */}
+                <div className="rounded-xl border border-gray-800 bg-gray-950/80 p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+                      <Search className="w-3.5 h-3.5" />
+                      🔍 Google Search Meta Snippet
+                    </span>
+                    <button
+                      onClick={() =>
+                        copyToClipboard(
+                          `Meta Title: ${generatedProduct.seoMetaTitle || generatedProduct.generatedTitle}\nMeta Description: ${generatedProduct.seoMetaDescription}`,
+                          'meta'
+                        )
+                      }
+                      className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                    >
+                      {copiedField === 'meta' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedField === 'meta' ? 'Copied' : 'Copy'}
+                    </button>
+                  </div>
+                  <div className="space-y-1 text-xs">
+                    <p className="text-cyan-300 font-medium truncate">
+                      {generatedProduct.seoMetaTitle || generatedProduct.generatedTitle}
+                    </p>
+                    <p className="text-gray-400 text-[11px] line-clamp-2">
+                      {generatedProduct.seoMetaDescription || generatedProduct.generatedDescription.slice(0, 160)}
+                    </p>
                   </div>
                 </div>
 
-                {/* 3. Generated Tags */}
+                {/* 6. Tags */}
                 <div>
                   <span className="block text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">
-                    SEO Tags
+                    🏷️ SEO Tags
                   </span>
                   <div className="flex flex-wrap gap-1.5">
                     {generatedProduct.generatedTags.map((tag, i) => (
@@ -423,7 +629,7 @@ export default function ProductGeneratorForm() {
                 </div>
               </div>
             ) : (
-              <div className="py-20 text-center border-2 border-dashed border-gray-800/80 rounded-xl p-8 bg-gray-950/40">
+              <div className="py-28 text-center border-2 border-dashed border-gray-800/80 rounded-xl p-8 bg-gray-950/40">
                 <Sparkles className="w-10 h-10 text-gray-600 mx-auto mb-3" />
                 <h4 className="text-sm font-semibold text-gray-300">No Product Generated Yet</h4>
                 <p className="text-xs text-gray-500 mt-1 max-w-xs mx-auto">
@@ -434,7 +640,7 @@ export default function ProductGeneratorForm() {
           </div>
 
           {generatedProduct && (
-            <div className="pt-6 border-t border-gray-800 mt-6">
+            <div className="pt-4 border-t border-gray-800 mt-4">
               <Link
                 href="/dashboard"
                 className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-white text-xs font-semibold py-2.5 transition"
@@ -446,6 +652,15 @@ export default function ProductGeneratorForm() {
           )}
         </div>
       </div>
+
+      {/* Bulk Generator Modal */}
+      <BulkGeneratorModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        onSuccess={() => {
+          setIsBulkModalOpen(false);
+        }}
+      />
     </div>
   );
 }

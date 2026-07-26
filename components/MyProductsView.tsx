@@ -55,7 +55,7 @@ export default function MyProductsView({
 
   // Selection & Export state
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [exportingType, setExportingType] = useState<'csv' | 'shopify' | null>(null);
+  const [exportingType, setExportingType] = useState<'csv' | 'shopify' | 'woocommerce' | null>(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -200,7 +200,7 @@ export default function MyProductsView({
   };
 
   // Export handling
-  const handleExport = async (type: 'csv' | 'shopify') => {
+  const handleExport = async (type: 'csv' | 'shopify' | 'woocommerce') => {
     if (selectedIds.length === 0) {
       toast.error('Please select at least one product to export.');
       return;
@@ -236,13 +236,13 @@ export default function MyProductsView({
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = downloadUrl;
-      a.download = type === 'shopify' ? 'shopify_products.csv' : 'products_export.csv';
+      a.download = `${type}_products_export.csv`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       window.URL.revokeObjectURL(downloadUrl);
 
-      toast.success(`Exported ${selectedIds.length} products to ${type.toUpperCase()}!`);
+      toast.success(`Exported ${selectedIds.length} products to ${type.toUpperCase()} CSV!`);
     } catch (err: any) {
       console.error(`Export error:`, err);
     } finally {
@@ -375,6 +375,20 @@ export default function MyProductsView({
                 <ShoppingBag className="h-3.5 w-3.5 text-white" />
               )}
               Export Shopify CSV
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleExport('woocommerce')}
+              disabled={selectedIds.length === 0 || exportingType !== null}
+              className="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            >
+              {exportingType === 'woocommerce' ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
+              ) : (
+                <ShoppingBag className="h-3.5 w-3.5 text-white" />
+              )}
+              Export WooCommerce CSV
             </button>
           </div>
         </div>

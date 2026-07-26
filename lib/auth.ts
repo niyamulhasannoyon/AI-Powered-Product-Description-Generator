@@ -33,11 +33,14 @@ const providers: NextAuthOptions['providers'] = [
         throw new Error('Invalid email or password');
       }
 
+      const role = (user as { role?: string }).role || (user.email === 'niyamulhasan1089@gmail.com' ? 'admin' : 'user');
+
       return {
         id: user.id,
         email: user.email,
         name: user.name,
         plan: user.plan,
+        role: role,
       };
     },
   }),
@@ -69,15 +72,18 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (!dbUser) {
+          const isInitialAdmin = user.email.toLowerCase() === 'niyamulhasan1089@gmail.com';
           dbUser = await prisma.user.create({
             data: {
               email: user.email.toLowerCase(),
               name: user.name || '',
               plan: 'free',
+              role: isInitialAdmin ? 'admin' : 'user',
             },
           });
         }
         user.id = dbUser.id;
+        (user as { role?: string }).role = dbUser.role || (user.email.toLowerCase() === 'niyamulhasan1089@gmail.com' ? 'admin' : 'user');
       }
       return true;
     },
@@ -85,6 +91,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.plan = (user as { plan?: string }).plan || 'free';
+        token.role = (user as { role?: string }).role || (token.email === 'niyamulhasan1089@gmail.com' ? 'admin' : 'user');
         if (user.image) token.picture = user.image;
       }
       return token;
@@ -93,6 +100,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         (session.user as { id?: string }).id = token.id as string;
         (session.user as { plan?: string }).plan = (token.plan as string) || 'free';
+        (session.user as { role?: string }).role = (token.role as string) || (session.user.email === 'niyamulhasan1089@gmail.com' ? 'admin' : 'user');
         if (token.picture) session.user.image = token.picture as string;
       }
       return session;

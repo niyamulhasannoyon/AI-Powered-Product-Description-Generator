@@ -3,8 +3,9 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Check, Loader2, Sparkles, Zap, ShieldCheck, ExternalLink, ArrowRight, X } from 'lucide-react';
+import { Check, Loader2, Sparkles, Zap, ShieldCheck, ExternalLink, ArrowRight, X, DollarSign } from 'lucide-react';
 import Link from 'next/link';
+import BinancePaymentModal from '@/components/BinancePaymentModal';
 
 function PricingContent() {
   const { data: session, status } = useSession();
@@ -16,6 +17,11 @@ function PricingContent() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [userPlan, setUserPlan] = useState<string>('free');
+
+  // Binance Modal state
+  const [binanceModalOpen, setBinanceModalOpen] = useState(false);
+  const [selectedBinancePlan, setSelectedBinancePlan] = useState<'pro' | 'business'>('pro');
+  const [selectedBinanceAmount, setSelectedBinanceAmount] = useState<number>(19);
 
   useEffect(() => {
     if (searchParams.get('checkout_success')) {
@@ -238,7 +244,7 @@ function PricingContent() {
             </ul>
           </div>
 
-          <div className="mt-8">
+          <div className="mt-8 space-y-2">
             {userPlan === 'pro' ? (
               <button
                 onClick={handleManageSubscription}
@@ -249,19 +255,33 @@ function PricingContent() {
                 Manage Subscription
               </button>
             ) : (
-              <button
-                onClick={() => handleSubscribe('pro')}
-                disabled={loadingPlan === 'pro'}
-                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-500 transition-colors shadow-lg shadow-blue-600/25 disabled:opacity-50"
-              >
-                {loadingPlan === 'pro' ? (
-                  <Loader2 className="h-4 w-4 animate-spin text-white" />
-                ) : (
-                  <>
-                    Upgrade to Pro <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
-              </button>
+              <>
+                <button
+                  onClick={() => handleSubscribe('pro')}
+                  disabled={loadingPlan === 'pro'}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-500 transition-colors shadow-lg shadow-blue-600/25 disabled:opacity-50"
+                >
+                  {loadingPlan === 'pro' ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-white" />
+                  ) : (
+                    <>
+                      Upgrade with Card <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => {
+                    setSelectedBinancePlan('pro');
+                    setSelectedBinanceAmount(19);
+                    setBinanceModalOpen(true);
+                  }}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 py-2.5 text-xs font-semibold text-amber-400 hover:bg-amber-500/20 transition-all"
+                >
+                  <DollarSign className="h-3.5 w-3.5" />
+                  Pay $19 via Binance / USDT
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -306,7 +326,7 @@ function PricingContent() {
             </ul>
           </div>
 
-          <div className="mt-8">
+          <div className="mt-8 space-y-2">
             {userPlan === 'business' ? (
               <button
                 onClick={handleManageSubscription}
@@ -317,23 +337,44 @@ function PricingContent() {
                 Manage Subscription
               </button>
             ) : (
-              <button
-                onClick={() => handleSubscribe('business')}
-                disabled={loadingPlan === 'business'}
-                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white hover:bg-emerald-500 transition-colors shadow-lg shadow-emerald-600/25 disabled:opacity-50"
-              >
-                {loadingPlan === 'business' ? (
-                  <Loader2 className="h-4 w-4 animate-spin text-white" />
-                ) : (
-                  <>
-                    Upgrade to Business <Zap className="h-4 w-4" />
-                  </>
-                )}
-              </button>
+              <>
+                <button
+                  onClick={() => handleSubscribe('business')}
+                  disabled={loadingPlan === 'business'}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white hover:bg-emerald-500 transition-colors shadow-lg shadow-emerald-600/25 disabled:opacity-50"
+                >
+                  {loadingPlan === 'business' ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-white" />
+                  ) : (
+                    <>
+                      Upgrade with Card <Zap className="h-4 w-4" />
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => {
+                    setSelectedBinancePlan('business');
+                    setSelectedBinanceAmount(49);
+                    setBinanceModalOpen(true);
+                  }}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 py-2.5 text-xs font-semibold text-amber-400 hover:bg-amber-500/20 transition-all"
+                >
+                  <DollarSign className="h-3.5 w-3.5" />
+                  Pay $49 via Binance / USDT
+                </button>
+              </>
             )}
           </div>
         </div>
       </div>
+
+      <BinancePaymentModal
+        isOpen={binanceModalOpen}
+        onClose={() => setBinanceModalOpen(false)}
+        defaultPlan={selectedBinancePlan}
+        defaultAmount={selectedBinanceAmount}
+      />
     </div>
   );
 }

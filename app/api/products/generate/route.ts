@@ -42,7 +42,16 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { imageUrl, keywords, language, tone, promptTemplateId } = body;
+    const {
+      imageUrl,
+      keywords,
+      language,
+      tone,
+      framework = user.defaultFramework || 'AIDA',
+      targetAudience = user.targetAudience || 'General Shoppers',
+      brandVoice = user.brandVoice || 'Standard',
+      promptTemplateId,
+    } = body;
 
     // Validate required fields
     if (!imageUrl || typeof imageUrl !== 'string') {
@@ -95,19 +104,29 @@ export async function POST(req: NextRequest) {
       keywords: keywordsArray,
       language,
       tone,
+      framework,
+      targetAudience,
+      brandVoice,
       systemPromptTemplate: templateText,
     });
 
-    // Save new Product row in DB
+    // Save new Product row in DB with extended structured fields
     const product = await prisma.product.create({
       data: {
         userId: user.id,
         imageUrl,
         keywords: keywordsArray,
         language,
+        copywritingFramework: framework,
+        bulletFeatures: aiResult.bulletFeatures,
+        socialHook: aiResult.socialHook,
+        targetAudience: targetAudience,
         generatedTitle: aiResult.title,
         generatedDescription: aiResult.description,
         generatedTags: aiResult.tags,
+        seoMetaTitle: aiResult.seoMetaTitle,
+        seoMetaDescription: aiResult.seoMetaDescription,
+        keywordDensityScore: aiResult.keywordDensityScore,
         promptTemplateId: selectedTemplateId,
       },
     });

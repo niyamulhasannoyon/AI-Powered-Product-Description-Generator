@@ -170,12 +170,12 @@ export default async function BillingPage() {
                     Current Plan
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    className="w-full rounded-xl bg-indigo-600 py-2.5 text-xs font-semibold text-white hover:bg-indigo-500 shadow-md shadow-indigo-600/20 transition-all"
+                  <Link
+                    href="/pricing"
+                    className="block text-center w-full rounded-xl bg-indigo-600 py-2.5 text-xs font-semibold text-white hover:bg-indigo-500 shadow-md shadow-indigo-600/20 transition-all"
                   >
                     Upgrade to {plan.name}
-                  </button>
+                  </Link>
                 )}
               </div>
             </div>

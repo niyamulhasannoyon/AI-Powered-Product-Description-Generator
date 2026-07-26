@@ -1,20 +1,43 @@
 import OpenAI from 'openai';
 
-export const DEFAULT_SYSTEM_PROMPT_TEMPLATE = `You are an expert e-commerce copywriter and SEO specialist. Given a product image and these keywords: {{keywords}}, write in {{language}} with a {{tone}} tone. Return ONLY valid JSON with keys: title (max 60 chars, SEO-optimized), description (150-300 words, benefit-driven), tags (8-12 relevant SEO tags), seoMetaDescription (max 160 chars).`;
+export const DEFAULT_SYSTEM_PROMPT_TEMPLATE = `You are a world-class e-commerce copywriter and SEO specialist. Analyze the product image deeply for visual attributes (materials, design, color, craftsmanship, function).
+Keywords: {{keywords}}
+Language: {{language}}
+Tone: {{tone}}
+Copywriting Framework: {{framework}}
+Target Audience: {{targetAudience}}
+Brand Voice Guidance: {{brandVoice}}
+
+Generate a high-converting product listing in JSON format. You MUST return ONLY valid JSON with keys:
+1. "title": Catchy, SEO-optimized title (max 60 chars)
+2. "bulletFeatures": Array of 4 to 5 punchy bullet points emphasizing benefits and visual details
+3. "description": Persuasive product description structured according to the {{framework}} copywriting framework (150-250 words)
+4. "socialHook": 1-2 sentence compelling social media ad hook (for Facebook/Instagram)
+5. "seoMetaTitle": SEO Title tag (max 60 chars)
+6. "seoMetaDescription": High CTR meta description for Google Search (max 160 chars)
+7. "tags": Array of 8-12 targeted SEO tags
+8. "keywordDensityScore": Number between 75 and 98 indicating estimated keyword optimization density score.`;
 
 export interface GenerateDescriptionParams {
   imageUrl: string;
   keywords: string[];
   language: string;
   tone: string;
+  framework?: string; // AIDA | PAS | FAB
+  targetAudience?: string;
+  brandVoice?: string;
   systemPromptTemplate?: string;
 }
 
 export interface GeneratedProductResponse {
   title: string;
   description: string;
-  tags: string[];
+  bulletFeatures: string[];
+  socialHook: string;
+  seoMetaTitle: string;
   seoMetaDescription: string;
+  tags: string[];
+  keywordDensityScore: number;
   tokensUsed: number;
 }
 
@@ -44,13 +67,19 @@ export function buildSystemPrompt(
   templateText: string,
   keywords: string[],
   language: string,
-  tone: string
+  tone: string,
+  framework: string = 'AIDA',
+  targetAudience: string = 'General Shoppers',
+  brandVoice: string = 'Standard'
 ): string {
   const keywordsStr = keywords.length > 0 ? keywords.join(', ') : 'N/A';
   return templateText
-    .replace('{{keywords}}', keywordsStr)
-    .replace('{{language}}', language)
-    .replace('{{tone}}', tone);
+    .replace(/\{\{keywords\}\}/g, keywordsStr)
+    .replace(/\{\{language\}\}/g, language)
+    .replace(/\{\{tone\}\}/g, tone)
+    .replace(/\{\{framework\}\}/g, framework)
+    .replace(/\{\{targetAudience\}\}/g, targetAudience || 'General Shoppers')
+    .replace(/\{\{brandVoice\}\}/g, brandVoice || 'Standard');
 }
 
 function parseAndValidateJson(rawText: string) {
@@ -81,7 +110,7 @@ function parseAndValidateJson(rawText: string) {
     throw new Error('Parsed response is not a valid object');
   }
 
-  // Unwrap nested wrapper objects (e.g., { "response": { ... } } or { "product": { ... } })
+  // Unwrap nested wrapper objects if present
   if (!parsed.title && !parsed.Title && !parsed.product_title && !parsed.productTitle) {
     const keys = Object.keys(parsed);
     for (const key of keys) {
@@ -103,6 +132,37 @@ function parseAndValidateJson(rawText: string) {
     parsed.description || parsed.Description || parsed.product_description || parsed.productDescription || parsed.summary || ''
   ).trim();
 
+  let bulletFeaturesRaw = parsed.bulletFeatures || parsed.bullet_features || parsed.features || parsed.keyFeatures;
+  let bulletFeatures: string[] = [];
+  if (Array.isArray(bulletFeaturesRaw)) {
+    bulletFeatures = bulletFeaturesRaw.map((b) => String(b).trim()).filter(Boolean);
+  } else if (typeof bulletFeaturesRaw === 'string') {
+    bulletFeatures = bulletFeaturesRaw.split('\n').map((b) => b.replace(/^[-•*]\s*/, '').trim()).filter(Boolean);
+  }
+  if (bulletFeatures.length === 0) {
+    bulletFeatures = [
+      'High-quality premium materials and durable construction',
+      'Designed for maximum comfort, utility, and modern style',
+      'Versatile performance suited for daily and professional use',
+    ];
+  }
+
+  const socialHook = String(
+    parsed.socialHook || parsed.social_hook || parsed.adHook || parsed.hook || title
+  ).trim();
+
+  const seoMetaTitle = String(
+    parsed.seoMetaTitle || parsed.seo_meta_title || parsed.metaTitle || title
+  ).trim();
+
+  let seoMetaDescription = String(
+    parsed.seoMetaDescription ||
+      parsed.seo_meta_description ||
+      parsed.metaDescription ||
+      parsed.meta_description ||
+      description.slice(0, 160)
+  ).trim();
+
   let tagsRaw = parsed.tags || parsed.Tags || parsed.seo_tags || parsed.seoTags || parsed.keywords;
   let tags: string[] = [];
   if (Array.isArray(tagsRaw)) {
@@ -114,14 +174,9 @@ function parseAndValidateJson(rawText: string) {
     tags = title.split(/\s+/).filter((w) => w.length > 3);
   }
 
-  let seoMetaDescription = String(
-    parsed.seoMetaDescription ||
-      parsed.seo_meta_description ||
-      parsed.metaDescription ||
-      parsed.meta_description ||
-      parsed.seoDescription ||
-      description.slice(0, 160)
-  ).trim();
+  const keywordDensityScore = typeof parsed.keywordDensityScore === 'number'
+    ? Math.min(100, Math.max(50, parsed.keywordDensityScore))
+    : 88;
 
   if (!title) {
     throw new Error('Invalid or missing "title" in AI response');
@@ -133,8 +188,12 @@ function parseAndValidateJson(rawText: string) {
   return {
     title,
     description,
-    tags,
+    bulletFeatures,
+    socialHook,
+    seoMetaTitle,
     seoMetaDescription,
+    tags,
+    keywordDensityScore,
   };
 }
 
@@ -168,7 +227,15 @@ async function generateWithOpenAI(
   const openai = new OpenAI({ apiKey });
 
   const template = params.systemPromptTemplate || DEFAULT_SYSTEM_PROMPT_TEMPLATE;
-  const systemPrompt = buildSystemPrompt(template, params.keywords, params.language, params.tone);
+  const systemPrompt = buildSystemPrompt(
+    template,
+    params.keywords,
+    params.language,
+    params.tone,
+    params.framework,
+    params.targetAudience,
+    params.brandVoice
+  );
 
   let attempt = 0;
   let lastError: Error | null = null;
@@ -246,7 +313,15 @@ async function generateWithMistral(
   });
 
   const template = params.systemPromptTemplate || DEFAULT_SYSTEM_PROMPT_TEMPLATE;
-  const systemPrompt = buildSystemPrompt(template, params.keywords, params.language, params.tone);
+  const systemPrompt = buildSystemPrompt(
+    template,
+    params.keywords,
+    params.language,
+    params.tone,
+    params.framework,
+    params.targetAudience,
+    params.brandVoice
+  );
 
   let attempt = 0;
   let lastError: Error | null = null;

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import {
   Sparkles,
   PlusCircle,
@@ -12,6 +13,7 @@ import {
   Settings,
   X,
   Zap,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface DashboardSidebarProps {
@@ -30,6 +32,10 @@ export default function DashboardSidebar({
   userPlan = 'free',
 }: DashboardSidebarProps) {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const isAdmin =
+    (session?.user as { role?: string })?.role === 'admin' ||
+    session?.user?.email === 'niyamulhasan1089@gmail.com';
 
   const navItems = [
     {
@@ -59,6 +65,17 @@ export default function DashboardSidebar({
       href: '/dashboard/settings',
       icon: Settings,
     },
+    ...(isAdmin
+      ? [
+          {
+            name: 'Admin Control Panel',
+            href: '/dashboard/admin',
+            icon: ShieldCheck,
+            badge: 'Admin',
+            badgeColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+          },
+        ]
+      : []),
   ];
 
   const usagePercent = Math.min(100, Math.round((usageCount / (usageLimit || 1)) * 100));

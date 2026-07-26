@@ -15,12 +15,18 @@ model User {
   stripeCustomerId String?
   plan             String           @default("free") // free | pro | business
   role             String           @default("user") // user | admin
+  defaultTone      String?          @default("Professional")
+  defaultLanguage  String?          @default("English")
+  brandVoice       String?          @db.Text
+  targetAudience   String?
+  defaultFramework String?          @default("AIDA")
   createdAt        DateTime         @default(now())
   products         Product[]
   promptTemplates  PromptTemplate[]
   usageLogs        UsageLog[]
   subscription     Subscription?
   paymentRequests  PaymentRequest[]
+  bulkJobs         BulkJob[]
 }
 
 model PaymentRequest {
@@ -54,9 +60,16 @@ model Product {
   imageUrl             String
   keywords             String[]
   language             String   @default("en")
+  copywritingFramework String?  @default("AIDA") // AIDA | PAS | FAB
+  bulletFeatures       String[]
+  socialHook           String?  @db.Text
+  targetAudience       String?
   generatedTitle       String?
   generatedDescription String?  @db.Text
   generatedTags        String[]
+  seoMetaTitle         String?
+  seoMetaDescription   String?  @db.Text
+  keywordDensityScore  Int?     @default(85)
   promptTemplateId     String?
   createdAt            DateTime @default(now())
 }
@@ -79,3 +92,15 @@ model UsageLog {
   tokensUsed Int      @default(0)
   createdAt  DateTime @default(now())
 }
+
+model BulkJob {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status         String   @default("PENDING") // PENDING | PROCESSING | COMPLETED | FAILED
+  totalCount     Int      @default(0)
+  processedCount Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
