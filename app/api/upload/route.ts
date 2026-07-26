@@ -3,33 +3,44 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { v2 as cloudinary } from 'cloudinary';
 
-// Safely configure Cloudinary if valid CLOUDINARY_URL or explicit keys are provided
-const rawUrl = (process.env.CLOUDINARY_URL || '').replace(/^["']|["']$/g, '').trim();
-const hasValidUrl = Boolean(rawUrl && rawUrl.startsWith('cloudinary://'));
-const hasExplicitKeys = Boolean(
-  process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME &&
-    process.env.CLOUDINARY_API_KEY &&
-    process.env.CLOUDINARY_API_SECRET
-);
+export const dynamic = 'force-dynamic';
 
-if (hasValidUrl) {
-  try {
-    cloudinary.config({
-      cloudinary_url: rawUrl,
-    });
-  } catch (err) {
-    console.warn('Failed to initialize Cloudinary from CLOUDINARY_URL:', err);
+function getCloudinaryConfig() {
+  const rawUrl = (process.env.CLOUDINARY_URL || '').replace(/^["']|["']$/g, '').trim();
+  const hasValidUrl = Boolean(rawUrl && rawUrl.startsWith('cloudinary://'));
+  const hasExplicitKeys = Boolean(
+    (process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME) &&
+      process.env.CLOUDINARY_API_KEY &&
+      process.env.CLOUDINARY_API_SECRET
+  );
+
+  if (hasValidUrl) {
+    try {
+      cloudinary.config({
+        cloudinary_url: rawUrl,
+        secure: true,
+      });
+      return true;
+    } catch (err) {
+      console.warn('Failed to initialize Cloudinary from CLOUDINARY_URL:', err);
+    }
   }
-} else if (hasExplicitKeys) {
-  try {
-    cloudinary.config({
-      cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
-    });
-  } catch (err) {
-    console.warn('Failed to initialize Cloudinary from explicit keys:', err);
+
+  if (hasExplicitKeys) {
+    try {
+      cloudinary.config({
+        cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME,
+        api_key: process.env.CLOUDINARY_API_KEY,
+        api_secret: process.env.CLOUDINARY_API_SECRET,
+        secure: true,
+      });
+      return true;
+    } catch (err) {
+      console.warn('Failed to initialize Cloudinary from explicit keys:', err);
+    }
   }
+
+  return false;
 }
 
 export async function POST(req: NextRequest) {
@@ -54,7 +65,7 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    const isCloudinaryConfigured = hasValidUrl || hasExplicitKeys;
+    const isCloudinaryConfigured = getCloudinaryConfig();
 
     if (isCloudinaryConfigured) {
       // Upload stream to Cloudinary
