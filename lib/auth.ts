@@ -3,6 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 import bcrypt from 'bcryptjs';
 import prisma from '@/lib/prisma';
+import { ADMIN_EMAILS } from '@/lib/admin';
 
 const providers: NextAuthOptions['providers'] = [
   CredentialsProvider({
@@ -16,8 +17,9 @@ const providers: NextAuthOptions['providers'] = [
         throw new Error('Email and password are required');
       }
 
+      const emailLower = credentials.email.toLowerCase();
       const user = await prisma.user.findUnique({
-        where: { email: credentials.email.toLowerCase() },
+        where: { email: emailLower },
       });
 
       if (!user || !user.passwordHash) {
@@ -33,7 +35,7 @@ const providers: NextAuthOptions['providers'] = [
         throw new Error('Invalid email or password');
       }
 
-      const role = (user as { role?: string }).role || (user.email === 'niyamulhasan1089@gmail.com' ? 'admin' : 'user');
+      const role = (user as { role?: string }).role || (ADMIN_EMAILS.includes(emailLower) ? 'admin' : 'user');
 
       return {
         id: user.id,
@@ -67,15 +69,16 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user, account }) {
       if (account?.provider === 'google' && user.email) {
+        const emailLower = user.email.toLowerCase();
         let dbUser = await prisma.user.findUnique({
-          where: { email: user.email.toLowerCase() },
+          where: { email: emailLower },
         });
 
         if (!dbUser) {
-          const isInitialAdmin = user.email.toLowerCase() === 'niyamulhasan1089@gmail.com';
+          const isInitialAdmin = ADMIN_EMAILS.includes(emailLower);
           dbUser = await prisma.user.create({
             data: {
-              email: user.email.toLowerCase(),
+              email: emailLower,
               name: user.name || '',
               plan: 'free',
               role: isInitialAdmin ? 'admin' : 'user',
@@ -83,7 +86,7 @@ export const authOptions: NextAuthOptions = {
           });
         }
         user.id = dbUser.id;
-        (user as { role?: string }).role = dbUser.role || (user.email.toLowerCase() === 'niyamulhasan1089@gmail.com' ? 'admin' : 'user');
+        (user as { role?: string }).role = dbUser.role || (ADMIN_EMAILS.includes(emailLower) ? 'admin' : 'user');
       }
       return true;
     },
@@ -91,7 +94,8 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.plan = (user as { plan?: string }).plan || 'free';
-        token.role = (user as { role?: string }).role || (token.email === 'niyamulhasan1089@gmail.com' ? 'admin' : 'user');
+        const userEmail = user.email?.toLowerCase();
+        token.role = (user as { role?: string }).role || (userEmail && ADMIN_EMAILS.includes(userEmail) ? 'admin' : 'user');
         if (user.image) token.picture = user.image;
       }
       return token;
@@ -100,7 +104,8 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         (session.user as { id?: string }).id = token.id as string;
         (session.user as { plan?: string }).plan = (token.plan as string) || 'free';
-        (session.user as { role?: string }).role = (token.role as string) || (session.user.email === 'niyamulhasan1089@gmail.com' ? 'admin' : 'user');
+        const userEmail = session.user.email?.toLowerCase();
+        (session.user as { role?: string }).role = (token.role as string) || (userEmail && ADMIN_EMAILS.includes(userEmail) ? 'admin' : 'user');
         if (token.picture) session.user.image = token.picture as string;
       }
       return session;

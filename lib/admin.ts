@@ -1,6 +1,11 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
+export const ADMIN_EMAILS = [
+  'niyamulhasan1089@gmail.com',
+  'niyamulhasanbd@gmail.com',
+];
+
 export async function checkAdminSession(customSession?: any) {
   const session = customSession || (await getServerSession(authOptions));
 
@@ -11,7 +16,9 @@ export async function checkAdminSession(customSession?: any) {
   const role = (session.user as { role?: string }).role;
   const email = session.user.email?.toLowerCase();
 
-  const isAdmin = role === 'admin' || email === 'niyamulhasan1089@gmail.com';
+  const isAdmin =
+    (email && ADMIN_EMAILS.includes(email)) ||
+    role === 'admin';
 
   if (!isAdmin) {
     return { isAdmin: false, session, error: 'Forbidden. Admin access required.' };

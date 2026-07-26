@@ -33,9 +33,11 @@ export default function DashboardSidebar({
 }: DashboardSidebarProps) {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const adminEmails = ['niyamulhasan1089@gmail.com', 'niyamulhasanbd@gmail.com'];
+  const userEmail = session?.user?.email?.toLowerCase();
   const isAdmin =
     (session?.user as { role?: string })?.role === 'admin' ||
-    session?.user?.email === 'niyamulhasan1089@gmail.com';
+    (userEmail && adminEmails.includes(userEmail));
 
   const navItems = [
     {

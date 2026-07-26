@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import {
   ShieldCheck,
@@ -151,7 +151,7 @@ export default function ProfessionalAdminPanel() {
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
   // Fetch Stats Overview
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     setLoadingStats(true);
     try {
       const res = await fetch('/api/admin/stats');
@@ -163,10 +163,10 @@ export default function ProfessionalAdminPanel() {
     } finally {
       setLoadingStats(false);
     }
-  };
+  }, []);
 
   // Fetch Users
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setLoadingUsers(true);
     try {
       const params = new URLSearchParams();
@@ -183,10 +183,10 @@ export default function ProfessionalAdminPanel() {
     } finally {
       setLoadingUsers(false);
     }
-  };
+  }, [userSearch, userPlanFilter, userRoleFilter]);
 
   // Fetch Payments
-  const fetchPayments = async () => {
+  const fetchPayments = useCallback(async () => {
     setLoadingPayments(true);
     try {
       const res = await fetch('/api/admin/payments');
@@ -198,10 +198,10 @@ export default function ProfessionalAdminPanel() {
     } finally {
       setLoadingPayments(false);
     }
-  };
+  }, []);
 
   // Fetch Products
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     setLoadingProducts(true);
     try {
       const params = new URLSearchParams();
@@ -215,10 +215,10 @@ export default function ProfessionalAdminPanel() {
     } finally {
       setLoadingProducts(false);
     }
-  };
+  }, [productSearch]);
 
   // Fetch Usage
-  const fetchUsage = async () => {
+  const fetchUsage = useCallback(async () => {
     setLoadingUsage(true);
     try {
       const res = await fetch('/api/admin/usage');
@@ -231,13 +231,13 @@ export default function ProfessionalAdminPanel() {
     } finally {
       setLoadingUsage(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (sessionStatus === 'authenticated') {
       fetchStats();
     }
-  }, [sessionStatus]);
+  }, [sessionStatus, fetchStats]);
 
   useEffect(() => {
     if (sessionStatus === 'authenticated') {
@@ -247,7 +247,7 @@ export default function ProfessionalAdminPanel() {
       if (activeTab === 'products') fetchProducts();
       if (activeTab === 'usage') fetchUsage();
     }
-  }, [activeTab]);
+  }, [activeTab, sessionStatus, fetchStats, fetchUsers, fetchPayments, fetchProducts, fetchUsage]);
 
   // Handle User Plan Update
   const handleUpdateUserPlan = async (userId: string, newPlan: string) => {
