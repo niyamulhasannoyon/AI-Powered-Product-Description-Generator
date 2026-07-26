@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String           @id @default(cuid())
+  email            String           @unique
+  passwordHash     String?
+  name             String?
+  stripeCustomerId String?
+  plan             String           @default("free") // free | pro | business
+  createdAt        DateTime         @default(now())
+  products         Product[]
+  promptTemplates  PromptTemplate[]
+  usageLogs        UsageLog[]
+  subscription     Subscription?
+}
+
+model Subscription {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id])
+  stripeSubscriptionId String
+  status               String   // active, canceled, past_due
+  plan                 String
+  currentPeriodEnd     DateTime
+}
+
+model Product {
+  id                   String   @id @default(cuid())
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id])
+  imageUrl             String
+  keywords             String[]
+  language             String   @default("en")
+  generatedTitle       String?
+  generatedDescription String?  @db.Text
+  generatedTags        String[]
+  promptTemplateId     String?
+  createdAt            DateTime @default(now())
+}
+
+model PromptTemplate {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  name         String
+  templateText String   @db.Text
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+}
+
+model UsageLog {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  action     String   // "generate", "export"
+  tokensUsed Int      @default(0)
+  createdAt  DateTime @default(now())
+}

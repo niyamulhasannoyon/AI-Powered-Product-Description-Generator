@@ -1,16 +1,26 @@
-# AI-Powered Product Description Generator
+# ProductPen AI - AI-Powered Product Description Generator
 
-An e-commerce tool built with **Next.js 14**, **TypeScript**, **Tailwind CSS**, **Prisma**, **OpenAI GPT-4 Vision**, and **Stripe**. Automatically analyze product images and generate compelling, SEO-optimized product titles, descriptions, and tags. Export your generated catalogue directly to standard CSV or Shopify CSV.
+![ProductPen AI Logo](/logo.jpg)
+
+An e-commerce SaaS platform built with **Next.js 14**, **TypeScript**, **Tailwind CSS**, **Prisma**, **OpenAI GPT-4 Vision**, and **Stripe**. Automatically analyze product images and generate compelling, localized SEO-optimized product titles, descriptions, and tags. Export your generated catalogue directly to standard CSV or native Shopify CSV.
+
+---
+
+## 🌟 Key Differentiators & SaaS Architecture
+
+- 🌍 **Multi-Language SEO Output**: While most AI description generators only support English, this platform natively generates localized titles, benefit-driven descriptions, and SEO tags across multiple global languages (e.g. English, Spanish, French, German, Italian, Japanese, Mandarin, etc.) tailored to international e-commerce audiences.
+- 🛍️ **Native Shopify CSV Export**: Eliminates tedious manual copy-pasting. Seamlessly converts generated product catalogues into official Shopify CSV import format (`Handle`, `Title`, `Body (HTML)`, `Tags`, `Published`, `Option1 Name`, `Option1 Value`, `Variant Price`, `Image Src`) for direct 1-click store catalog importing.
+- 📈 **Usage-Based SaaS Economics**: Designed for sustainable SaaS unit economics instead of simple API wrapping. Enforces real-time monthly tier generation limits (Free: 10/mo, Pro: 300/mo, Business: 2,000/mo) via database usage logs (`checkUsageLimit`), preventing API cost overruns and enforcing payment upgrades via Stripe webhooks.
 
 ---
 
 ## Features
 
 - 📸 **Vision AI Generation**: Analyze product images using OpenAI GPT-4 Vision.
-- 🎨 **Tone & Language Customization**: Generate titles, descriptions, and SEO tags in multiple languages and brand tones.
+- 🌐 **Multi-Language & Tone Customization**: Generate SEO titles, descriptions, and tags in target languages and brand tones.
 - ⚙️ **Custom Prompt Templates**: Save, manage, and apply custom AI generation prompt templates.
-- 📊 **Tiered Usage & Subscriptions**: Integrated with Stripe for Free, Pro, and Business tier limits.
-- 📁 **CSV & Shopify Export**: Export generated product catalogues as standard CSV or Shopify-compatible import files.
+- 📁 **Standard & Shopify CSV Export**: Export generated product catalogues as standard CSV or Shopify-compatible import files.
+- 📊 **Tiered Usage & Subscriptions**: Integrated with Stripe for Free, Pro, and Business tier limits and subscription portal.
 - ⚡ **Automated CI/CD**: Built-in GitHub Actions workflow running linter, test suite, and build checks on every Pull Request.
 
 ---
@@ -177,4 +187,3 @@ On every **Pull Request** and push to `main`:
 ## License
 
 This project is licensed under the MIT License.
-# AI-Powered-Product-Description-Generator
