@@ -22,6 +22,7 @@ import {
   Tag,
   Plus,
   RefreshCw,
+  Copy,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -142,6 +143,18 @@ export default function MyProductsView({
     setEditingId(null);
     setEditTitle('');
     setEditDescription('');
+  };
+
+  const handleCopyProduct = (product: Product) => {
+    let text = `📌 ${product.generatedTitle || 'PRODUCT TITLE'}\n\n`;
+    if (product.generatedDescription) {
+      text += `PRODUCT DESCRIPTION:\n${product.generatedDescription}\n\n`;
+    }
+    if (product.generatedTags && product.generatedTags.length > 0) {
+      text += `TAGS:\n${product.generatedTags.map((t) => `#${t}`).join(' ')}\n`;
+    }
+    navigator.clipboard.writeText(text);
+    toast.success('Copy-paste ready text copied to clipboard!');
   };
 
   // Save inline edits
@@ -596,6 +609,13 @@ export default function MyProductsView({
                       <td className="py-4 px-4 text-right align-top">
                         <div className="flex items-center justify-end gap-1">
                           <button
+                            onClick={() => handleCopyProduct(product)}
+                            title="Copy ready text"
+                            className="p-1.5 rounded-lg text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/40 transition-colors"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </button>
+                          <button
                             onClick={() => startEditing(product)}
                             title="Inline edit title and description"
                             className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
@@ -655,6 +675,13 @@ export default function MyProductsView({
                     </div>
 
                     <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleCopyProduct(product)}
+                        className="p-1 rounded-lg text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/40"
+                        title="Copy ready text"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
                       <button
                         onClick={() => startEditing(product)}
                         className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800"

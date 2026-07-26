@@ -3,6 +3,7 @@ import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import UsageMeter from '@/components/UsageMeter';
 import MyProductsView from '@/components/MyProductsView';
+import RecentProductsShowcase from '@/components/RecentProductsShowcase';
 import { redirect } from 'next/navigation';
 
 import { PLAN_LIMITS } from '@/lib/usageLimit';
@@ -57,6 +58,7 @@ export default async function DashboardMainHubPage() {
     imageUrl: p.imageUrl,
     keywords: p.keywords,
     language: p.language,
+    copywritingFramework: p.copywritingFramework,
     generatedTitle: p.generatedTitle,
     generatedDescription: p.generatedDescription,
     generatedTags: p.generatedTags,
@@ -68,10 +70,10 @@ export default async function DashboardMainHubPage() {
       {/* Page Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-          Dashboard
+          Dashboard Studio
         </h1>
         <p className="mt-1 text-sm text-gray-400">
-          Manage your AI generated products, monitor generation usage, and export your catalog.
+          Manage your AI generated products, quick-copy ready copy, and export your catalog.
         </p>
       </div>
 
@@ -83,11 +85,14 @@ export default async function DashboardMainHubPage() {
         periodEnd={periodEnd.toISOString()}
       />
 
+      {/* Recent AI Products Showcase Section */}
+      <RecentProductsShowcase products={products} />
+
       {/* Main "My Products" Paginated Hub */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-white tracking-tight">
-            My Products & Generations
+            All Generated Product Catalog
           </h2>
         </div>
         <MyProductsView initialProducts={products} userPlan={planName} />
