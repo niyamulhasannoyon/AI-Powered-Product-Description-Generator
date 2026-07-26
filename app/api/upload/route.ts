@@ -1,47 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+
+// Sanitize process.env.CLOUDINARY_URL BEFORE importing Cloudinary package.
+// If CLOUDINARY_URL in Vercel environment variables is malformed or missing 'cloudinary://',
+// delete it so the Cloudinary SDK's auto-config does NOT throw an unhandled exception.
+if (process.env.CLOUDINARY_URL) {
+  const cleanedUrl = process.env.CLOUDINARY_URL.replace(/^["']|["']$/g, '').trim();
+  if (cleanedUrl.startsWith('cloudinary://')) {
+    process.env.CLOUDINARY_URL = cleanedUrl;
+  } else {
+    delete process.env.CLOUDINARY_URL;
+  }
+}
+
 import { v2 as cloudinary } from 'cloudinary';
 
 export const dynamic = 'force-dynamic';
-
-function getCloudinaryConfig() {
-  const rawUrl = (process.env.CLOUDINARY_URL || '').replace(/^["']|["']$/g, '').trim();
-  const hasValidUrl = Boolean(rawUrl && rawUrl.startsWith('cloudinary://'));
-  const hasExplicitKeys = Boolean(
-    (process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME) &&
-      process.env.CLOUDINARY_API_KEY &&
-      process.env.CLOUDINARY_API_SECRET
-  );
-
-  if (hasValidUrl) {
-    try {
-      cloudinary.config({
-        cloudinary_url: rawUrl,
-        secure: true,
-      });
-      return true;
-    } catch (err) {
-      console.warn('Failed to initialize Cloudinary from CLOUDINARY_URL:', err);
-    }
-  }
-
-  if (hasExplicitKeys) {
-    try {
-      cloudinary.config({
-        cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME,
-        api_key: process.env.CLOUDINARY_API_KEY,
-        api_secret: process.env.CLOUDINARY_API_SECRET,
-        secure: true,
-      });
-      return true;
-    } catch (err) {
-      console.warn('Failed to initialize Cloudinary from explicit keys:', err);
-    }
-  }
-
-  return false;
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -65,9 +40,26 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    const isCloudinaryConfigured = getCloudinaryConfig();
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME;
+    const hasCloudinaryUrl = Boolean(process.env.CLOUDINARY_URL);
+    const hasExplicitKeys = Boolean(
+      cloudName &&
+        process.env.CLOUDINARY_API_KEY &&
+        process.env.CLOUDINARY_API_SECRET
+    );
+
+    const isCloudinaryConfigured = hasCloudinaryUrl || hasExplicitKeys;
 
     if (isCloudinaryConfigured) {
+      if (hasExplicitKeys && !hasCloudinaryUrl) {
+        cloudinary.config({
+          cloud_name: cloudName,
+          api_key: process.env.CLOUDINARY_API_KEY,
+          api_secret: process.env.CLOUDINARY_API_SECRET,
+          secure: true,
+        });
+      }
+
       // Upload stream to Cloudinary
       const uploadResult = await new Promise<{ secure_url: string }>((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
