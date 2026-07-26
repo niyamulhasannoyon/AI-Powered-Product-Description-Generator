@@ -43,7 +43,7 @@ export default function RegisterPage() {
       });
 
       if (signInRes?.ok) {
-        router.push('/dashboard');
+        router.push('/');
         router.refresh();
       } else {
         router.push('/login?registered=true');
@@ -55,7 +55,7 @@ export default function RegisterPage() {
   };
 
   const handleGoogleSignIn = () => {
-    signIn('google', { callbackUrl: '/dashboard' });
+    signIn('google', { callbackUrl: '/' });
   };
 
   return (

@@ -14,11 +14,27 @@ model User {
   name             String?
   stripeCustomerId String?
   plan             String           @default("free") // free | pro | business
+  role             String           @default("user") // user | admin
   createdAt        DateTime         @default(now())
   products         Product[]
   promptTemplates  PromptTemplate[]
   usageLogs        UsageLog[]
   subscription     Subscription?
+  paymentRequests  PaymentRequest[]
+}
+
+model PaymentRequest {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan          String   // pro | business
+  amount        Float    // Dollar amount
+  binanceId     String   // Binance ID / Pay ID
+  transactionId String   // Binance Order ID / TxID
+  status        String   @default("PENDING") // PENDING | APPROVED | REJECTED
+  note          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Subscription {

@@ -85,6 +85,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.plan = (user as { plan?: string }).plan || 'free';
+        if (user.image) token.picture = user.image;
       }
       return token;
     },
@@ -92,6 +93,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         (session.user as { id?: string }).id = token.id as string;
         (session.user as { plan?: string }).plan = (token.plan as string) || 'free';
+        if (token.picture) session.user.image = token.picture as string;
       }
       return session;
     },
