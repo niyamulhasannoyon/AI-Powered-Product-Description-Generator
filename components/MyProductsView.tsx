@@ -474,6 +474,7 @@ export default function MyProductsView({
                       <td className="py-4 px-4 align-top">
                         <div className="flex gap-4 items-start">
                           {product.imageUrl ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
                             <img
                               src={product.imageUrl}
                               alt={product.generatedTitle || 'Product thumbnail'}
@@ -659,6 +660,7 @@ export default function MyProductsView({
 
                   {/* Thumbnail Image */}
                   {product.imageUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={product.imageUrl}
                       alt={product.generatedTitle || 'Product thumbnail'}

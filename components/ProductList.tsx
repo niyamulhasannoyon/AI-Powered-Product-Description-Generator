@@ -295,6 +295,7 @@ export default function ProductList({
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-3">
                       {product.imageUrl ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
                         <img
                           src={product.imageUrl}
                           alt={product.generatedTitle || 'Product thumbnail'}
