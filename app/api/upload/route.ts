@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
-// Sanitize process.env.CLOUDINARY_URL BEFORE importing Cloudinary package.
-// If CLOUDINARY_URL in Vercel environment variables is malformed or missing 'cloudinary://',
-// delete it so the Cloudinary SDK's auto-config does NOT throw an unhandled exception.
+export const dynamic = 'force-dynamic';
+
+// Sanitize process.env.CLOUDINARY_URL BEFORE Cloudinary is loaded.
+// Note: We use require() below so Webpack does not hoist the import above this sanitization logic.
 if (process.env.CLOUDINARY_URL) {
   const cleanedUrl = process.env.CLOUDINARY_URL.replace(/^["']|["']$/g, '').trim();
   if (cleanedUrl.startsWith('cloudinary://')) {
@@ -14,9 +15,8 @@ if (process.env.CLOUDINARY_URL) {
   }
 }
 
-import { v2 as cloudinary } from 'cloudinary';
-
-export const dynamic = 'force-dynamic';
+// Require Cloudinary after sanitizing process.env.CLOUDINARY_URL
+const cloudinary = require('cloudinary').v2;
 
 export async function POST(req: NextRequest) {
   try {
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
             folder: 'ai_products',
             resource_type: 'image',
           },
-          (error, result) => {
+          (error: any, result: any) => {
             if (error || !result) {
               return reject(error || new Error('Upload to Cloudinary failed'));
             }
