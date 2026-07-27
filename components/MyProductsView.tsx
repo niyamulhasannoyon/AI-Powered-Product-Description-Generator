@@ -23,8 +23,12 @@ import {
   Plus,
   RefreshCw,
   Copy,
+  Eye,
 } from 'lucide-react';
 import Link from 'next/link';
+import ProductDetailModal from '@/components/ProductDetailModal';
+import { useRealtimeSync } from '@/lib/useRealtimeSync';
+import { broadcastRealtimeEvent } from '@/lib/realtime';
 
 export interface Product {
   id: string;
@@ -68,8 +72,30 @@ export default function MyProductsView({
   const [editDescription, setEditDescription] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
 
-  // Delete state
+  // Delete & Detail Modal state
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [selectedDetailProduct, setSelectedDetailProduct] = useState<Product | null>(null);
+
+  // Fetch live products from backend API
+  const fetchLatestProducts = async () => {
+    try {
+      const res = await fetch('/api/products');
+      if (res.ok) {
+        const freshData = await res.json();
+        setProducts(freshData);
+      }
+    } catch (e) {
+      console.error('Failed to sync products in background:', e);
+    }
+  };
+
+  // Real-time sync listener for product mutations
+  useRealtimeSync({
+    events: ['PRODUCT_MUTATED'],
+    onEvent: () => {
+      fetchLatestProducts();
+    },
+  });
 
   // Extract unique languages present in product dataset
   const availableLanguages = useMemo(() => {
@@ -180,6 +206,7 @@ export default function MyProductsView({
         prev.map((p) => (p.id === id ? { ...p, ...updatedProduct } : p))
       );
 
+      broadcastRealtimeEvent('PRODUCT_MUTATED', 'update', updatedProduct);
       toast.success('Product updated successfully!');
       cancelEditing();
     } catch (err: any) {
@@ -204,6 +231,8 @@ export default function MyProductsView({
 
       setProducts((prev) => prev.filter((p) => p.id !== id));
       setSelectedIds((prev) => prev.filter((item) => item !== id));
+      broadcastRealtimeEvent('PRODUCT_MUTATED', 'delete', { id });
+      broadcastRealtimeEvent('USAGE_MUTATED', 'update');
       toast.success('Product removed');
     } catch (err: any) {
       toast.error(err?.message || 'Error deleting product');
@@ -609,6 +638,13 @@ export default function MyProductsView({
                       <td className="py-4 px-4 text-right align-top">
                         <div className="flex items-center justify-end gap-1">
                           <button
+                            onClick={() => setSelectedDetailProduct(product)}
+                            title="View full generation details"
+                            className="p-1.5 rounded-lg text-indigo-400 hover:text-indigo-300 hover:bg-indigo-950/40 transition-colors"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          <button
                             onClick={() => handleCopyProduct(product)}
                             title="Copy ready text"
                             className="p-1.5 rounded-lg text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/40 transition-colors"
@@ -676,6 +712,13 @@ export default function MyProductsView({
 
                     <div className="flex items-center gap-1">
                       <button
+                        onClick={() => setSelectedDetailProduct(product)}
+                        className="p-1 rounded-lg text-indigo-400 hover:text-indigo-300 hover:bg-indigo-950/40"
+                        title="View full details"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </button>
+                      <button
                         onClick={() => handleCopyProduct(product)}
                         className="p-1 rounded-lg text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/40"
                         title="Copy ready text"
@@ -705,10 +748,14 @@ export default function MyProductsView({
                     <img
                       src={product.imageUrl}
                       alt={product.generatedTitle || 'Product thumbnail'}
-                      className="w-full h-36 object-cover rounded-xl border border-gray-800 bg-gray-950"
+                      onClick={() => setSelectedDetailProduct(product)}
+                      className="w-full h-36 object-cover rounded-xl border border-gray-800 bg-gray-950 cursor-pointer hover:opacity-90 transition-opacity"
                     />
                   ) : (
-                    <div className="w-full h-36 rounded-xl border border-gray-800 bg-gray-950 flex items-center justify-center text-gray-500">
+                    <div
+                      onClick={() => setSelectedDetailProduct(product)}
+                      className="w-full h-36 rounded-xl border border-gray-800 bg-gray-950 flex items-center justify-center text-gray-500 cursor-pointer hover:bg-gray-900 transition-colors"
+                    >
                       <ImageIcon className="h-8 w-8" />
                     </div>
                   )}
@@ -747,8 +794,11 @@ export default function MyProductsView({
                       </div>
                     </div>
                   ) : (
-                    <div>
-                      <h4 className="font-semibold text-white text-sm line-clamp-1">
+                    <div
+                      onClick={() => setSelectedDetailProduct(product)}
+                      className="cursor-pointer group"
+                    >
+                      <h4 className="font-semibold text-white text-sm line-clamp-1 group-hover:text-indigo-300 transition-colors">
                         {product.generatedTitle || 'Untitled Product'}
                       </h4>
                       <p className="text-xs text-gray-400 line-clamp-3 mt-1 leading-relaxed">
@@ -821,6 +871,13 @@ export default function MyProductsView({
           </div>
         </div>
       )}
+
+      {/* Product Full Details Modal */}
+      <ProductDetailModal
+        product={selectedDetailProduct}
+        isOpen={!!selectedDetailProduct}
+        onClose={() => setSelectedDetailProduct(null)}
+      />
     </div>
   );
 }

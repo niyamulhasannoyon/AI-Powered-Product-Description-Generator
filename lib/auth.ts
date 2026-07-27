@@ -98,14 +98,42 @@ export const authOptions: NextAuthOptions = {
         token.role = (user as { role?: string }).role || (userEmail && ADMIN_EMAILS.includes(userEmail) ? 'admin' : 'user');
         if (user.image) token.picture = user.image;
       }
+
+      // Always fetch latest plan, role & name from database to keep session fresh
+      const userIdentifier = (token.id as string) || (token.email as string);
+      if (userIdentifier) {
+        try {
+          const dbUser = await prisma.user.findFirst({
+            where: {
+              OR: [
+                { id: userIdentifier },
+                { email: userIdentifier.toLowerCase() },
+              ],
+            },
+            select: { id: true, plan: true, role: true, name: true, email: true },
+          });
+
+          if (dbUser) {
+            token.id = dbUser.id;
+            token.plan = dbUser.plan || 'free';
+            const emailLower = dbUser.email.toLowerCase();
+            token.role = dbUser.role || (ADMIN_EMAILS.includes(emailLower) ? 'admin' : 'user');
+            if (dbUser.name) token.name = dbUser.name;
+          }
+        } catch (e) {
+          console.error('Failed to sync DB user in JWT callback:', e);
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
+        const userEmail = session.user.email?.toLowerCase();
         (session.user as { id?: string }).id = token.id as string;
         (session.user as { plan?: string }).plan = (token.plan as string) || 'free';
-        const userEmail = session.user.email?.toLowerCase();
-        (session.user as { role?: string }).role = (token.role as string) || (userEmail && ADMIN_EMAILS.includes(userEmail) ? 'admin' : 'user');
+        (session.user as { role?: string }).role =
+          (token.role as string) || (userEmail && ADMIN_EMAILS.includes(userEmail || '') ? 'admin' : 'user');
         if (token.picture) session.user.image = token.picture as string;
       }
       return session;

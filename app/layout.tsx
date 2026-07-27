@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'ProductPen AI | AI Product Description Generator',
   description:
-    'Generate high-converting e-commerce product titles, descriptions, and SEO tags instantly using OpenAI & Gemini models.',
+    'Generate high-converting e-commerce product titles, descriptions, and SEO tags instantly using OpenAI GPT-4o & Google Gemini 3.5 models.',
   keywords: ['ProductPen AI', 'AI Product Description', 'Ecommerce Copywriting', 'SEO Generator', 'Product Marketing'],
   icons: {
     icon: '/icon.png',

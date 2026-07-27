@@ -43,7 +43,7 @@ export default async function BillingPage() {
       limit: 50,
       features: [
         '50 AI generations per month',
-        'Standard OpenAI & Gemini models',
+        'Standard OpenAI GPT-4o & Google Gemini 3.5 models',
         'CSV & Shopify exports',
         'Basic prompt templates',
       ],
@@ -58,7 +58,7 @@ export default async function BillingPage() {
       limit: 300,
       features: [
         '300 AI generations per month',
-        'Advanced Gemini & GPT-4o models',
+        'Advanced OpenAI GPT-4o & Google Gemini 3.5 models',
         'Custom prompt templates editor',
         'Batch inline editing & exports',
         'Priority customer support',

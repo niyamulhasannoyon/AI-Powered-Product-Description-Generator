@@ -6,8 +6,8 @@ import {
   generateDescription,
   DEFAULT_SYSTEM_PROMPT_TEMPLATE,
 } from '@/lib/ai/generateDescription';
-
 import { checkUsageLimit } from '@/lib/usageLimit';
+import { enforceRateLimit } from '@/lib/rateLimit';
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,6 +17,14 @@ export async function POST(req: NextRequest) {
     if (!session?.user || !userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Security Rate Limiting (max 20 requests per minute per user)
+    const rateLimitResponse = enforceRateLimit(req, {
+      limit: 20,
+      windowMs: 60 * 1000,
+      identifier: userId,
+    });
+    if (rateLimitResponse) return rateLimitResponse;
 
     // Check usage limit before processing generation
     const usage = await checkUsageLimit(userId);

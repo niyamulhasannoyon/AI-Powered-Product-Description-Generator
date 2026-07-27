@@ -71,9 +71,11 @@ function LoginFormContent() {
   return (
     <div className="w-full max-w-md space-y-8 rounded-2xl border border-gray-800 bg-gray-900/60 p-8 backdrop-blur-xl shadow-xl shadow-brand-500/5">
       <div className="text-center">
-        <div className="mx-auto relative flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-900 border border-cyan-500/30 overflow-hidden shadow-lg shadow-cyan-500/20">
-          <Image src="/icon.png" alt="ProductPen AI" width={48} height={48} className="object-cover" />
-        </div>
+        <Link href="/" className="inline-block group">
+          <div className="mx-auto relative flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-900 border border-cyan-500/30 overflow-hidden shadow-lg shadow-cyan-500/20 group-hover:scale-105 transition-transform">
+            <Image src="/icon.png" alt="ProductPen AI" width={48} height={48} className="object-cover" />
+          </div>
+        </Link>
         <h2 className="mt-4 text-2xl font-bold tracking-tight text-white">Welcome back</h2>
         <p className="mt-2 text-sm text-gray-400">Sign in to your ProductPen AI account</p>
       </div>

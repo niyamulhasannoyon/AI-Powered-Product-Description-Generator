@@ -62,9 +62,11 @@ export default function RegisterPage() {
     <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center px-4 py-12">
       <div className="w-full max-w-md space-y-8 rounded-2xl border border-gray-800 bg-gray-900/60 p-8 backdrop-blur-xl shadow-xl shadow-brand-500/5">
         <div className="text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-500 text-white shadow-lg shadow-brand-500/30">
+        <Link href="/" className="inline-block group">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 group-hover:scale-105 transition-transform">
             <Sparkles className="h-6 w-6" />
           </div>
+        </Link>
           <h2 className="mt-4 text-2xl font-bold tracking-tight text-white">Create an account</h2>
           <p className="mt-2 text-sm text-gray-400">Start generating AI product descriptions in seconds</p>
         </div>

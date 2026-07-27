@@ -1,7 +1,15 @@
+'use client';
+
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { Sparkles, ArrowRight, Zap, ShoppingBag, Wand2, CheckCircle2 } from 'lucide-react';
 
 export default function Home() {
+  const { data: session } = useSession();
+  const userPlan = ((session?.user as { plan?: string })?.plan || 'free').toLowerCase();
+  const userRole = (session?.user as { role?: string })?.role;
+  const isProOrBusiness = userPlan === 'pro' || userPlan === 'business' || userRole === 'admin';
+
   return (
     <div className="relative overflow-hidden pt-12 pb-20 md:pt-20 md:pb-28">
       {/* Subtle background glow */}
@@ -13,7 +21,7 @@ export default function Home() {
         <div className="flex justify-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-4 py-1.5 text-xs font-semibold text-blue-400 backdrop-blur-md">
             <Sparkles className="h-3.5 w-3.5" />
-            <span>Powered by OpenAI GPT-4o & Google Gemini 1.5</span>
+            <span>Powered by OpenAI GPT-4o & Google Gemini 3.5</span>
           </div>
         </div>
 
@@ -30,10 +38,14 @@ export default function Home() {
         {/* CTA Buttons */}
         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
-            href="/dashboard"
+            href={session ? '/dashboard/generate' : '/register'}
             className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3.5 text-base font-semibold text-white shadow-xl shadow-blue-600/25 hover:from-blue-500 hover:to-indigo-500 active:scale-95 transition-all"
           >
-            Start Generating Free
+            {isProOrBusiness
+              ? 'Open AI Generator'
+              : session
+              ? 'Start Generating Copy'
+              : 'Start Generating Free'}
             <ArrowRight className="h-4 w-4" />
           </Link>
           <Link
@@ -135,7 +147,7 @@ export default function Home() {
             </div>
             <h3 className="text-lg font-semibold text-white">Multi-Model AI Engine</h3>
             <p className="mt-2 text-sm text-gray-400">
-              Combine OpenAI GPT-4o and Google Gemini vision & language models to craft tailored descriptions for Shopify, Amazon, and WooCommerce.
+              Combine OpenAI GPT-4o and Google Gemini 3.5 vision &amp; language models to craft tailored descriptions for Shopify, Amazon, and WooCommerce.
             </p>
           </div>
 

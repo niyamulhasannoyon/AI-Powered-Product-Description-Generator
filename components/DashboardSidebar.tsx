@@ -38,6 +38,7 @@ export default function DashboardSidebar({
   const isAdmin =
     (session?.user as { role?: string })?.role === 'admin' ||
     (userEmail && adminEmails.includes(userEmail));
+  const activePlan = (session?.user as { plan?: string })?.plan || userPlan || 'free';
 
   const navItems = [
     {
@@ -87,7 +88,7 @@ export default function DashboardSidebar({
       <div className="space-y-6">
         {/* Brand & Mobile close button */}
         <div className="flex items-center justify-between px-2">
-          <Link href="/dashboard" className="flex items-center gap-2.5 group">
+          <Link href="/" className="flex items-center gap-2.5 group">
             <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gray-900 border border-indigo-500/30 overflow-hidden shadow-md shadow-indigo-600/30 group-hover:scale-105 transition-transform">
               <Image src="/icon.png" alt="ProductPen AI" width={36} height={36} className="object-cover" />
             </div>
@@ -155,7 +156,7 @@ export default function DashboardSidebar({
           <div className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-indigo-400 animate-pulse" />
             <span className="text-xs font-semibold text-gray-200 uppercase tracking-wider">
-              {userPlan} Plan
+              {activePlan} Plan
             </span>
           </div>
           <span className="text-xs font-mono font-medium text-gray-400">

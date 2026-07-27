@@ -28,6 +28,10 @@ import {
   Sliders,
   ChevronRight,
   Filter,
+  Save,
+  QrCode,
+  Mail,
+  FileText,
 } from 'lucide-react';
 
 interface SystemStats {
@@ -145,10 +149,72 @@ export default function ProfessionalAdminPanel() {
   const [loadingUsage, setLoadingUsage] = useState(false);
   const [totalTokens, setTotalTokens] = useState<number>(0);
 
+  // System Settings state
+  const [systemSettings, setSystemSettings] = useState({
+    binancePayId: '284719302',
+    usdtAddress: '0x94F8672C15eF968A91a27e748A4269894e666999',
+    binanceQrUrl: '',
+    paymentInstructions: 'Send USDT via Binance Pay ID or USDT BEP20/TRC20 network and submit your transaction ID.',
+    supportEmail: 'support@example.com',
+    proPriceUsd: 19,
+    businessPriceUsd: 49,
+  });
+  const [loadingSettings, setLoadingSettings] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
+
   // Modals / Confirmation
   const [selectedUserForAction, setSelectedUserForAction] = useState<UserItem | null>(null);
   const [updatingUserPlan, setUpdatingUserPlan] = useState<boolean>(false);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+
+  // Fetch System Settings
+  const fetchSettings = useCallback(async () => {
+    setLoadingSettings(true);
+    try {
+      const res = await fetch('/api/admin/settings');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch settings');
+      if (data.settings) {
+        setSystemSettings({
+          binancePayId: data.settings.binancePayId || '284719302',
+          usdtAddress: data.settings.usdtAddress || '0x94F8672C15eF968A91a27e748A4269894e666999',
+          binanceQrUrl: data.settings.binanceQrUrl || '',
+          paymentInstructions: data.settings.paymentInstructions || '',
+          supportEmail: data.settings.supportEmail || '',
+          proPriceUsd: data.settings.proPriceUsd ?? 19,
+          businessPriceUsd: data.settings.businessPriceUsd ?? 49,
+        });
+      }
+    } catch (err: any) {
+      console.error('Fetch settings error:', err);
+    } finally {
+      setLoadingSettings(false);
+    }
+  }, []);
+
+  // Save System Settings
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingSettings(true);
+    setActionMessage(null);
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(systemSettings),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to save system settings');
+      setActionMessage({
+        type: 'success',
+        message: 'System & Binance settings updated successfully! Live changes are active.',
+      });
+    } catch (err: any) {
+      setActionMessage({ type: 'error', message: err.message || 'Failed to update settings' });
+    } finally {
+      setSavingSettings(false);
+    }
+  };
 
   // Fetch Stats Overview
   const fetchStats = useCallback(async () => {
@@ -236,8 +302,9 @@ export default function ProfessionalAdminPanel() {
   useEffect(() => {
     if (sessionStatus === 'authenticated') {
       fetchStats();
+      fetchSettings();
     }
-  }, [sessionStatus, fetchStats]);
+  }, [sessionStatus, fetchStats, fetchSettings]);
 
   useEffect(() => {
     if (sessionStatus === 'authenticated') {
@@ -246,8 +313,9 @@ export default function ProfessionalAdminPanel() {
       if (activeTab === 'payments') fetchPayments();
       if (activeTab === 'products') fetchProducts();
       if (activeTab === 'usage') fetchUsage();
+      if (activeTab === 'settings') fetchSettings();
     }
-  }, [activeTab, sessionStatus, fetchStats, fetchUsers, fetchPayments, fetchProducts, fetchUsage]);
+  }, [activeTab, sessionStatus, fetchStats, fetchUsers, fetchPayments, fetchProducts, fetchUsage, fetchSettings]);
 
   // Handle User Plan Update
   const handleUpdateUserPlan = async (userId: string, newPlan: string) => {
@@ -337,6 +405,11 @@ export default function ProfessionalAdminPanel() {
       setPayments((prev) =>
         prev.map((p) => (p.id === requestId ? { ...p, status } : p))
       );
+      if (typeof window !== 'undefined') {
+        const { broadcastRealtimeEvent } = require('@/lib/realtime');
+        broadcastRealtimeEvent('PAYMENT_MUTATED', 'update', { requestId, status });
+        broadcastRealtimeEvent('USAGE_MUTATED', 'update');
+      }
       setActionMessage({
         type: 'success',
         message: `Payment request successfully ${status.toLowerCase()}!`,
@@ -1116,7 +1189,177 @@ export default function ProfessionalAdminPanel() {
 
       {/* TAB 6: SYSTEM HEALTH & CONTROLS */}
       {activeTab === 'settings' && (
-        <div className="space-y-6">
+        <div className="space-y-8">
+          {/* Binance & Payment Configuration Form */}
+          <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-950/20 via-gray-900 to-gray-950 p-6 space-y-6 shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-800 pb-4">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-400 mb-1">
+                  <CreditCard className="h-3.5 w-3.5" /> Dynamic Payment Configuration
+                </div>
+                <h3 className="text-xl font-extrabold text-white tracking-tight">
+                  Binance Pay & Crypto Settings
+                </h3>
+                <p className="text-xs text-gray-400">
+                  Update your Binance ID, USDT Wallet Address, QR Code link, and payment instructions. Changes appear live on customer checkout.
+                </p>
+              </div>
+
+              {loadingSettings && (
+                <div className="flex items-center gap-2 text-xs text-amber-400">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading settings...
+                </div>
+              )}
+            </div>
+
+            <form onSubmit={handleSaveSettings} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Binance Pay ID */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-300">
+                    Binance Pay ID / Merchant ID
+                  </label>
+                  <div className="relative">
+                    <CreditCard className="absolute left-3.5 top-3 h-4 w-4 text-amber-400" />
+                    <input
+                      type="text"
+                      required
+                      value={systemSettings.binancePayId}
+                      onChange={(e) => setSystemSettings({ ...systemSettings, binancePayId: e.target.value })}
+                      placeholder="e.g. 284719302"
+                      className="w-full rounded-xl border border-gray-800 bg-gray-950 pl-10 pr-4 py-2.5 text-sm font-mono text-white placeholder-gray-600 focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+                  <p className="text-[11px] text-gray-500">Your Binance Pay ID displayed in the user payment modal.</p>
+                </div>
+
+                {/* USDT Wallet Address */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-300">
+                    USDT Wallet Address (BEP20 / TRC20)
+                  </label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3.5 top-3 h-4 w-4 text-emerald-400" />
+                    <input
+                      type="text"
+                      required
+                      value={systemSettings.usdtAddress}
+                      onChange={(e) => setSystemSettings({ ...systemSettings, usdtAddress: e.target.value })}
+                      placeholder="e.g. 0x94F8672C15eF968A91a27e748A4269894e666999"
+                      className="w-full rounded-xl border border-gray-800 bg-gray-950 pl-10 pr-4 py-2.5 text-sm font-mono text-white placeholder-gray-600 focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+                  <p className="text-[11px] text-gray-500">The crypto wallet address users copy to send USDT.</p>
+                </div>
+
+                {/* Binance QR Code URL */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-300">
+                    Binance QR Code Image URL (Optional)
+                  </label>
+                  <div className="relative">
+                    <QrCode className="absolute left-3.5 top-3 h-4 w-4 text-indigo-400" />
+                    <input
+                      type="url"
+                      value={systemSettings.binanceQrUrl}
+                      onChange={(e) => setSystemSettings({ ...systemSettings, binanceQrUrl: e.target.value })}
+                      placeholder="https://example.com/binance-qr.png"
+                      className="w-full rounded-xl border border-gray-800 bg-gray-950 pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:border-indigo-500 focus:outline-none"
+                    />
+                  </div>
+                  <p className="text-[11px] text-gray-500">Direct image URL of your Binance Pay QR code image.</p>
+                </div>
+
+                {/* Support Email */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-300">
+                    Support Email / Contact
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3.5 top-3 h-4 w-4 text-purple-400" />
+                    <input
+                      type="email"
+                      value={systemSettings.supportEmail}
+                      onChange={(e) => setSystemSettings({ ...systemSettings, supportEmail: e.target.value })}
+                      placeholder="support@yourdomain.com"
+                      className="w-full rounded-xl border border-gray-800 bg-gray-950 pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none"
+                    />
+                  </div>
+                  <p className="text-[11px] text-gray-500">Used for manual payment verification inquiries.</p>
+                </div>
+
+                {/* Pro Price ($ USD) */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-300">
+                    Pro Plan Price ($ USD)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-2.5 text-indigo-400 font-bold">$</span>
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      value={systemSettings.proPriceUsd}
+                      onChange={(e) => setSystemSettings({ ...systemSettings, proPriceUsd: parseFloat(e.target.value) || 19 })}
+                      className="w-full rounded-xl border border-gray-800 bg-gray-950 pl-8 pr-4 py-2.5 text-sm font-mono text-white focus:border-indigo-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Business Price ($ USD) */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-300">
+                    Business Plan Price ($ USD)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-2.5 text-purple-400 font-bold">$</span>
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      value={systemSettings.businessPriceUsd}
+                      onChange={(e) => setSystemSettings({ ...systemSettings, businessPriceUsd: parseFloat(e.target.value) || 49 })}
+                      className="w-full rounded-xl border border-gray-800 bg-gray-950 pl-8 pr-4 py-2.5 text-sm font-mono text-white focus:border-purple-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Instructions */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-300">
+                  Payment Instructions / Notes for Users
+                </label>
+                <div className="relative">
+                  <FileText className="absolute left-3.5 top-3 h-4 w-4 text-gray-400" />
+                  <textarea
+                    rows={3}
+                    value={systemSettings.paymentInstructions}
+                    onChange={(e) => setSystemSettings({ ...systemSettings, paymentInstructions: e.target.value })}
+                    placeholder="Enter special instructions or notes to display in the Binance payment modal..."
+                    className="w-full rounded-xl border border-gray-800 bg-gray-950 pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:border-amber-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex justify-end pt-2">
+                <button
+                  type="submit"
+                  disabled={savingSettings}
+                  className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-6 py-3 text-sm font-bold text-gray-950 hover:bg-amber-400 disabled:opacity-50 transition-all shadow-lg shadow-amber-500/20"
+                >
+                  {savingSettings ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  Save System & Binance Settings
+                </button>
+              </div>
+            </form>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* System Status Indicators */}
             <div className="rounded-2xl border border-gray-800 bg-gray-900/60 p-6 space-y-4">
@@ -1172,7 +1415,7 @@ export default function ProfessionalAdminPanel() {
 
                 <div className="p-3 rounded-xl bg-gray-950 border border-indigo-500/20 flex justify-between items-center">
                   <div>
-                    <p className="font-bold text-indigo-400">Pro Plan Limit ($19/mo)</p>
+                    <p className="font-bold text-indigo-400">Pro Plan Limit (${systemSettings.proPriceUsd}/mo)</p>
                     <p className="text-gray-500">Monthly AI copy generations</p>
                   </div>
                   <span className="font-mono font-bold text-indigo-300">2,500 items / mo</span>
@@ -1180,7 +1423,7 @@ export default function ProfessionalAdminPanel() {
 
                 <div className="p-3 rounded-xl bg-gray-950 border border-purple-500/20 flex justify-between items-center">
                   <div>
-                    <p className="font-bold text-purple-400">Business Plan Limit ($49/mo)</p>
+                    <p className="font-bold text-purple-400">Business Plan Limit (${systemSettings.businessPriceUsd}/mo)</p>
                     <p className="text-gray-500">Monthly AI copy generations</p>
                   </div>
                   <span className="font-mono font-bold text-purple-300">10,000 items / mo</span>

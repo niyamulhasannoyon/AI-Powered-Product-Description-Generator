@@ -1,7 +1,9 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Zap, Sparkles, AlertCircle, ArrowUpRight } from 'lucide-react';
+import { Zap, Sparkles, ArrowUpRight } from 'lucide-react';
+import { useRealtimeSync } from '@/lib/useRealtimeSync';
 
 interface UsageMeterProps {
   usedCount: number;
@@ -11,11 +13,56 @@ interface UsageMeterProps {
 }
 
 export default function UsageMeter({
-  usedCount = 0,
-  planLimit = 300,
-  planName = 'pro',
-  periodEnd,
+  usedCount: initialUsedCount = 0,
+  planLimit: initialPlanLimit = 300,
+  planName: initialPlanName = 'pro',
+  periodEnd: initialPeriodEnd,
 }: UsageMeterProps) {
+  const [usedCount, setUsedCount] = useState<number>(initialUsedCount);
+  const [planLimit, setPlanLimit] = useState<number>(initialPlanLimit);
+  const [planName, setPlanName] = useState<string>(initialPlanName);
+  const [periodEnd, setPeriodEnd] = useState<string | undefined>(initialPeriodEnd);
+
+  // Sync state if props update from Server Component revalidation
+  useEffect(() => {
+    setUsedCount(initialUsedCount);
+    setPlanLimit(initialPlanLimit);
+    setPlanName(initialPlanName);
+    setPeriodEnd(initialPeriodEnd);
+  }, [initialUsedCount, initialPlanLimit, initialPlanName, initialPeriodEnd]);
+
+  // Fetch live usage stats from API
+  const fetchLiveUsage = async () => {
+    try {
+      const res = await fetch('/api/usage');
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data.usedThisMonth === 'number') {
+          setUsedCount(data.usedThisMonth);
+        }
+        if (typeof data.planLimit === 'number') {
+          setPlanLimit(data.planLimit);
+        }
+        if (data.planName) {
+          setPlanName(data.planName);
+        }
+        if (data.periodEnd) {
+          setPeriodEnd(data.periodEnd);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to sync live usage meter:', e);
+    }
+  };
+
+  // Real-time listener for generation and payment events
+  useRealtimeSync({
+    events: ['USAGE_MUTATED', 'PRODUCT_MUTATED', 'PAYMENT_MUTATED'],
+    onEvent: () => {
+      fetchLiveUsage();
+    },
+  });
+
   const percentage = Math.min(100, Math.round((usedCount / (planLimit || 1)) * 100));
   const remaining = Math.max(0, planLimit - usedCount);
 

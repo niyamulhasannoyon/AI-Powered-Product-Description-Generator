@@ -82,6 +82,11 @@ export default function BulkGeneratorModal({ isOpen, onClose, onSuccess }: BulkG
         successCount: data.successCount,
         failedCount: data.failedCount,
       });
+      if (typeof window !== 'undefined') {
+        const { broadcastRealtimeEvent } = require('@/lib/realtime');
+        broadcastRealtimeEvent('PRODUCT_MUTATED', 'create');
+        broadcastRealtimeEvent('USAGE_MUTATED', 'update');
+      }
       onSuccess();
     } catch (err: any) {
       console.error('Bulk generation error:', err);

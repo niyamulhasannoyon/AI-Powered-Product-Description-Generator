@@ -248,6 +248,12 @@ export default function ProductGeneratorForm() {
       }
 
       setGeneratedProduct(data);
+      // Broadcast real-time events across UI components & browser tabs
+      if (typeof window !== 'undefined') {
+        const { broadcastRealtimeEvent } = require('@/lib/realtime');
+        broadcastRealtimeEvent('PRODUCT_MUTATED', 'create', data);
+        broadcastRealtimeEvent('USAGE_MUTATED', 'update');
+      }
       // Auto-minimize input form to maximize output screen view
       setIsFormMinimized(true);
     } catch (err: any) {
